@@ -1,0 +1,63 @@
+networks:
+  mmembrilnet:
+    name: mmembrilnet
+    driver: bridge
+
+services:
+  nginx:
+    container_name: nginx
+    build: ./requeriments/nginx
+    image: nginx
+    ports:
+      - 433:433
+    volumes:
+      - wordpress_data:/var/www/html
+    restart: always
+    networks:
+      - mmembrilnet
+
+
+  mariadb:
+    container_name: mariadb
+    build:
+      context: ./requirements/mariadb
+    image: mariadb
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    restart: always
+    networks:
+      - mmembrilnet
+    env_file:
+      - .env
+
+
+  wordpress:
+    container_name: wordpress
+    build: ./requirements/wordpress
+    image: wordpress
+    depends_on:
+      - mariadb
+    volumes:
+      -wordpress_data:/var/www/html
+    restart: always
+    networks:
+      - mmembrilnet
+    env_file:
+      - .env
+
+
+volumes:
+  mariadb_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/mmembril/data/mysql
+      o: bind
+  
+
+  wordpress_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/mmembril/data/wordpress
+      o: bind
