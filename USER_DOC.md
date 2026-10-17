@@ -48,8 +48,8 @@ https://mmembril.42.fr
 El certificado puede ser autofirmado. Para consultar el estado y los logs:
 
 ```bash
-docker-compose -f srcs/docker-compose.yml ps
-docker-compose -f srcs/docker-compose.yml logs
+docker compose -f srcs/docker-compose.yml ps
+docker compose -f srcs/docker-compose.yml logs
 ```
 
 Detener los contenedores sin borrar los datos:

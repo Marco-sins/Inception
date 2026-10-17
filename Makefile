@@ -1,4 +1,4 @@
-COMPOSE := $(shell if command -v docker-compose >/dev/null 2>&1; then echo docker-compose; else echo docker compose; fi)
+COMPOSE := docker compose
 COMPOSE_FILE := -f ./srcs/docker-compose.yml
 
 all:

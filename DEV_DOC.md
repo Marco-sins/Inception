@@ -32,7 +32,7 @@ Alpine. No se permiten imágenes preparadas de WordPress, NGINX o MariaDB.
 Validar antes de arrancar:
 
 ```bash
-docker-compose -f srcs/docker-compose.yml config
+docker compose -f srcs/docker-compose.yml config
 ```
 
 ## Implementación
