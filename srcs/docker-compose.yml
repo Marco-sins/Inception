@@ -6,10 +6,10 @@ networks:
 services:
   nginx:
     container_name: nginx
-    build: ./requeriments/nginx
+    build: ./requirements/nginx
     image: nginx
     ports:
-      - 433:433
+      - "443:443"
     volumes:
       - wordpress_data:/var/www/html
     restart: always
@@ -29,6 +29,11 @@ services:
       - mmembrilnet
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u$${MYSQL_ROOT_USER} -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
 
   wordpress:
@@ -36,9 +41,10 @@ services:
     build: ./requirements/wordpress
     image: wordpress
     depends_on:
-      - mariadb
+      mariadb:
+        condition: service_healthy
     volumes:
-      -wordpress_data:/var/www/html
+      - wordpress_data:/var/www/html
     restart: always
     networks:
       - mmembrilnet

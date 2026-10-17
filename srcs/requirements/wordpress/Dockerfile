@@ -2,9 +2,11 @@ FROM debian:12.11
 
 RUN apt-get update && apt-get -y install \
     curl \
+    ca-certificates \
     php8.2-fpm \
     php8.2-mysql \
-    mariadb-client 
+    mariadb-client \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
     && chmod +x wp-cli.phar \

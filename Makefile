@@ -1,16 +1,14 @@
+COMPOSE := $(shell if command -v docker-compose >/dev/null 2>&1; then echo docker-compose; else echo docker compose; fi)
+COMPOSE_FILE := -f ./srcs/docker-compose.yml
+
 all:
-	@docker-compose -f ./srcs/docker-compose.yml up -d --build
+	@$(COMPOSE) $(COMPOSE_FILE) up -d --build
 
 down:
-	@docker-compose -f ./srcs/docker-compose.yml down
+	@$(COMPOSE) $(COMPOSE_FILE) down
 
 clean:
-	@rm -fr /home/mmembril/data/mysql/*
-	@rm -fr /home/mmembril/data/wordpress/*
-	-@docker stop $$(docker ps -qa) 2>/dev/null
-	-@docker rm $$(docker ops -qa) 2>/dev/null
-	-@docker rmi $$(docker images -qa) 2>/dev/null
-	-@docker volume rm $$(docker volume ls -q) 2>/dev/null
-	-@docker network rm mmembrilnet 2>/dev/null
+	@$(COMPOSE) $(COMPOSE_FILE) down -v --rmi local
+	@rm -rf /home/mmembril/data/mysql/* /home/mmembril/data/wordpress/*
 
 .PHONY: all down clean

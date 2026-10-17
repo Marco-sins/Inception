@@ -1,8 +1,9 @@
 FROM debian:12.11
 
-RUN apt-get update && apt-get install -y nginx openssl
+RUN apt-get update && apt-get install -y --no-install-recommends nginx openssl \
+    && rm -rf /var/lib/apt/lists/*
 
-EXPOSE 433
+EXPOSE 443
 
 COPY ./conf/default /etc/nginx/sites-enabled/default
 COPY ./tools/nginx_start.sh /var/www

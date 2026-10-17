@@ -3,25 +3,29 @@
 # Inception
 
 ## Description
-Inception is a system administration project that deploys a small Docker infrastructure. The goal is to virtualize several Docker images, set up a secure web server (NGINX), a database (MariaDB), and a dynamic website (WordPress), communicating via a dedicated internal Docker network.
+
+Inception deploys a small Docker infrastructure composed of three containers:
+
+- NGINX with TLS 1.2/1.3.
+- WordPress with PHP-FPM.
+- MariaDB for the WordPress database.
+
+The services communicate through a private Docker network. NGINX is the only
+service accessible from outside and uses port `443`.
 
 ## Instructions
-1. Ensure your local domain is mapped in `/etc/hosts`: `127.0.0.1 mmembril.42.fr`
-2. Build and run the complete project: `make`
-3. Stop the containers: `make down`
-4. Remove the complete environment (containers, volumes, images): `make clean`
-*Note: Make sure your user is in the `docker` group, or use `sudo`.*
 
-## Project Description
-This project uses Docker to containerize services instead of running them directly on the host, ensuring reproducibility, high performance, and environmental isolation.
-
-- **Virtual Machines vs Docker:** VMs virtualize entire Operating Systems including hardware, making them heavy. Docker virtualizes at the OS level, sharing the host's kernel, making them much faster and lighter.
-- **Secrets vs Environment Variables:** Environment variables are key-value pairs great for passing dynamic configuration. Secrets are encrypted and far safer for passing sensitive data like passwords.
-- **Docker Network vs Host Network:** A Docker Network isolates containers so only explicitly linked ones can interact. Host Network drops this isolation, directly exposing container services to the host's interface.
-- **Docker Volumes vs Bind Mounts:** Volumes are fully managed by Docker, safer, and persistent across container restarts. Bind mounts map an exact host directory onto the container, which depends heavily on the host OS file structure.
+See [USER_DOC.md](./USER_DOC.md) for installation and usage instructions.
+Technical details and mandatory checks are available in
+[DEV_DOC.md](./DEV_DOC.md).
 
 ## Resources
-- [Docker Documentation](https://docs.docker.com/)
-- [Nginx Official Documentation](https://nginx.org/en/docs/)
-- [MariaDB Knowledge Base](https://mariadb.com/kb/en/)
-- [WordPress Support](https://wordpress.org/support/)
+
+- [Docker documentation](https://docs.docker.com/)
+- [NGINX documentation](https://nginx.org/en/docs/)
+- [MariaDB documentation](https://mariadb.com/kb/en/)
+- [WordPress documentation](https://wordpress.org/documentation/)
+
+AI was used to help review the repository, compare it with the mandatory
+subject requirements, and organize this documentation. The final configuration
+must be understood and verified by the project author.

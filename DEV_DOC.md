@@ -1,66 +1,49 @@
-# Developer Documentation
+# Inception - documentación técnica
 
-## Entorno de desarrollo / corrección
-- SO objetivo: Debian 12 (la evaluación se realiza sobre una VM Debian).  
-- Usuario esperado: `mmembril`. Las rutas de volúmenes usan `/home/mmembril/data/...` por diseño.
-- Requisitos: `docker`, `docker-compose`, `make`.
+## Arquitectura obligatoria
 
-## Estructura relevante
-- `inception/srcs/docker-compose.yml` — definición de servicios, redes y volúmenes.  
-- `inception/srcs/requirements/` — Dockerfiles y configuraciones por servicio.  
-- `inception/srcs/env.txt` — plantilla para generar `inception/srcs/.env` (no versionado).
+El proyecto debe ejecutarse en una máquina virtual usando Docker Compose:
 
-## Variables de entorno (`.env`)
-La plantilla se encuentra en `inception/srcs/env.txt`. Copia y edita antes de levantar el stack:
-
-```bash
-cp inception/srcs/env.txt inception/srcs/.env
-nano inception/srcs/.env
+```text
+NGINX :443 (TLS) -> WordPress/PHP-FPM -> MariaDB
 ```
 
-Variables principales (explicación):
-- `MYSQL_DATABASE`, `MYSQL_ROOT_USER`, `MYSQL_ROOT_PASSWORD`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_HOSTNAME`: configuración de MariaDB.  
-- `DOMAIN_NAME`: dominio usado por WordPress / NGINX.  
-- `WORDPRESS_ADMIN`, `WORDPRESS_ADMIN_PASS`, `WORDPRESS_ADMIN_EMAIL`: credenciales admin WP.  
-- `WORDPRESS_USER`, `WORDPRESS_USER_PASS`, `WORDPRESS_EMAIL`: usuario adicional.
+Debe haber tres contenedores independientes, una red Docker propia y dos
+volúmenes nombrados: uno para `/var/lib/mysql` y otro para
+`/var/www/html`. Los datos deben persistir en `/home/mmembril/data`.
 
-Nota: no subas `inception/srcs/.env` al repositorio; mantenerlo fuera es la práctica recomendada. Si se desea mayor seguridad en producción, migrar a Docker secrets.
+Cada imagen debe construirse con su propio Dockerfile basado en Debian o
+Alpine. No se permiten imágenes preparadas de WordPress, NGINX o MariaDB.
 
-## Build y ejecución
-1. Desde la raíz del repo:  
-```bash
-make
-```
-2. Para detener:  
-```bash
-make down
-```
-3. Para limpiar datos locales (ADVERTENCIA: borrará datos):  
-```bash
-make clean
-```
+## Requisitos de validación
 
-## Volúmenes y persistencia
-Los volúmenes están ligados a rutas host bind:  
-- MariaDB: `/home/mmembril/data/mysql`  
-- WordPress: `/home/mmembril/data/wordpress`
+- Solo NGINX publica el puerto `443`.
+- NGINX usa únicamente TLS 1.2 y/o 1.3.
+- WordPress contiene PHP-FPM, pero no NGINX.
+- MariaDB no contiene NGINX.
+- Los servicios usan la red declarada en Compose; no `host`, `links` ni
+  `--link`.
+- Los contenedores tienen `restart: always`.
+- WordPress crea dos usuarios y el administrador no contiene `admin`.
+- Las contraseñas llegan mediante variables de entorno.
+- No se utiliza la etiqueta `latest`.
+- No se usan bucles infinitos como `tail -f` o `sleep infinity`.
 
-Para verificar desde la VM del corrector:  
-```bash
-docker volume ls
-docker volume inspect <volume_name>
-```
-El `device` debe contener `/home/mmembril/data/`.
-
-## Recompilar tras cambio de configuración
-Si modificas un Dockerfile o un archivo de configuración (por ejemplo `conf/`), reconstruye y reinicia:
+Validar antes de arrancar:
 
 ```bash
-make down
-make
+docker-compose -f srcs/docker-compose.yml config
 ```
 
-## Puntos a justificar en la defensa
-- Motivo de no versionar `.env` (seguridad).  
-- Elección de `debian:12.11` como imagen base (compatibilidad con paquetes, versión estable).  
-- Estructura del repo y por qué `srcs` está en `inception/srcs` (documentarlo si el corrector exige `srcs/` en la raíz).
+## Implementación
+
+MariaDB incluye un `healthcheck` y WordPress espera a que esté saludable antes
+de iniciar. Los scripts tienen errores explícitos y esperas limitadas. El
+Makefile solo gestiona los recursos de este proyecto; `clean` elimina también
+los datos persistentes.
+
+Las credenciales reales deben crearse en `srcs/.env`, que está excluido de Git.
+El fichero `srcs/env.txt` solo contiene valores de ejemplo.
+
+Esta documentación cubre únicamente la parte obligatoria; el bonus queda
+fuera del alcance.
