@@ -14,6 +14,7 @@ set -Eeuo pipefail
 : "${WORDPRESS_EMAIL:?WORDPRESS_EMAIL is required}"
 : "${WORDPRESS_USER_PASS:?WORDPRESS_USER_PASS is required}"
 
+chown -R www-data:www-data /var/www/html
 echo "Waiting for MariaDB..."
 for attempt in $(seq 1 60); do
     if mariadb -h"$MYSQL_HOSTNAME" -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" \

@@ -38,9 +38,9 @@ docker compose -f srcs/docker-compose.yml config
 ## Implementación
 
 MariaDB incluye un `healthcheck` y WordPress espera a que esté saludable antes
-de iniciar. Los scripts tienen errores explícitos y esperas limitadas. El
-Makefile solo gestiona los recursos de este proyecto; `clean` elimina también
-los datos persistentes.
+de iniciar. Los scripts preparan los permisos de los volúmenes, tienen errores
+explícitos y esperas limitadas. `make` prepara automáticamente `.env`, los
+directorios persistentes y el dominio local.
 
 Las credenciales reales deben crearse en `srcs/.env`, que está excluido de Git.
 El fichero `srcs/env.txt` solo contiene valores de ejemplo.

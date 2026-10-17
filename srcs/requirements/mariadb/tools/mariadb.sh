@@ -7,6 +7,7 @@ set -Eeuo pipefail
 : "${MYSQL_USER:?MYSQL_USER is required}"
 : "${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}"
 
+chown -R mysql:mysql /var/lib/mysql
 service mariadb start
 
 for attempt in $(seq 1 30); do
