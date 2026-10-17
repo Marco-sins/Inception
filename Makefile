@@ -9,6 +9,6 @@ down:
 
 clean:
 	@$(COMPOSE) $(COMPOSE_FILE) down -v --rmi local
-	@rm -rf /home/mmembril/data/mysql/* /home/mmembril/data/wordpress/*
+	@sudo rm -rf /home/mmembril/data/mysql/* /home/mmembril/data/wordpress/*
 
 .PHONY: all down clean

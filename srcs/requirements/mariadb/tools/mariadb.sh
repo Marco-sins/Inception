@@ -20,7 +20,9 @@ for attempt in $(seq 1 30); do
     sleep 1
 done
 
-if ! mariadb -u"$MYSQL_ROOT_USER" -p"$MYSQL_ROOT_PASSWORD" -e "SELECT 1" >/dev/null 2>&1; then
+if mariadb -u"$MYSQL_ROOT_USER" -p"$MYSQL_ROOT_PASSWORD" -e "SELECT 1" >/dev/null 2>&1; then
+    echo "MariaDB is already configured."
+else
     mariadb -u"$MYSQL_ROOT_USER" <<SQL
 CREATE DATABASE IF NOT EXISTS \`$MYSQL_DATABASE\`;
 CREATE USER IF NOT EXISTS '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD';
