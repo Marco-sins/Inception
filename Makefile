@@ -1,4 +1,6 @@
 all:
+	@mkdir -p /home/mmembril/data/mysql
+	@mkdir -p /home/mmembril/data/wordpress
 	@docker-compose -f ./srcs/docker-compose.yml up -d --build
 
 down:
