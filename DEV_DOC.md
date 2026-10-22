@@ -1,49 +1,77 @@
-# Inception - documentación técnica
+# Inception - Developer documentation
 
-## Arquitectura obligatoria
+## Prerequisites and setup
 
-El proyecto debe ejecutarse en una máquina virtual usando Docker Compose:
+Use a Linux virtual machine with Docker Engine, the Docker Compose plugin,
+`make`, and `sudo`. The repository is structured as follows:
 
 ```text
-NGINX :443 (TLS) -> WordPress/PHP-FPM -> MariaDB
+srcs/
+  docker-compose.yml
+  .env.example
+  requirements/
+    nginx/
+    wordpress/
+    mariadb/
 ```
 
-Debe haber tres contenedores independientes, una red Docker propia y dos
-volúmenes nombrados: uno para `/var/lib/mysql` y otro para
-`/var/www/html`. Los datos deben persistir en `/home/mmembril/data`.
+Create the local configuration and replace every placeholder:
 
-Cada imagen debe construirse con su propio Dockerfile basado en Debian o
-Alpine. No se permiten imágenes preparadas de WordPress, NGINX o MariaDB.
+```sh
+cp srcs/.env.example srcs/.env
+$EDITOR srcs/.env
+```
 
-## Requisitos de validación
+`srcs/.env` is ignored by Git. It is the only local configuration file
+containing passwords. Each service has its own Dockerfile and does not use a
+pre-built WordPress, NGINX, or MariaDB image.
 
-- Solo NGINX publica el puerto `443`.
-- NGINX usa únicamente TLS 1.2 y/o 1.3.
-- WordPress contiene PHP-FPM, pero no NGINX.
-- MariaDB no contiene NGINX.
-- Los servicios usan la red declarada en Compose; no `host`, `links` ni
-  `--link`.
-- Los contenedores tienen `restart: always`.
-- WordPress crea dos usuarios y el administrador no contiene `admin`.
-- Las contraseñas llegan mediante variables de entorno.
-- No se utiliza la etiqueta `latest`.
-- No se usan bucles infinitos como `tail -f` o `sleep infinity`.
+## Build and launch
 
-Validar antes de arrancar:
+The normal workflow is:
 
-```bash
+```sh
+make
+```
+
+The Makefile creates `/home/mmembril/data/mysql` and
+`/home/mmembril/data/wordpress`, ensures the local domain is mapped, and runs
+`docker compose up -d --build`. Validate the rendered Compose file without
+starting containers:
+
+```sh
 docker compose -f srcs/docker-compose.yml config
 ```
 
-## Implementación
+## Container and volume management
 
-MariaDB incluye un `healthcheck` y WordPress espera a que esté saludable antes
-de iniciar. Los scripts preparan los permisos de los volúmenes, tienen errores
-explícitos y esperas limitadas. `make` prepara automáticamente `.env`, los
-directorios persistentes y el dominio local.
+```sh
+make ps
+make logs
+make down
+docker compose -f srcs/docker-compose.yml build
+docker compose -f srcs/docker-compose.yml up -d
+docker compose -f srcs/docker-compose.yml exec wordpress wp user list --allow-root
+docker volume ls
+```
 
-Las credenciales reales deben crearse en `srcs/.env`, que está excluido de Git.
-El fichero `srcs/env.txt` solo contiene valores de ejemplo.
+`make clean` stops the stack, removes locally built images and volumes, and
+deletes the persistent data directory. Use it only when all site data may be
+discarded.
 
-Esta documentación cubre únicamente la parte obligatoria; el bonus queda
-fuera del alcance.
+## Persistence and runtime details
+
+The named volumes are `inception_mariadb` and `inception_wordpress`. Their local
+driver stores data at:
+
+- `/home/mmembril/data/mysql` for MariaDB.
+- `/home/mmembril/data/wordpress` for WordPress files.
+
+The `mariadb` healthcheck gates WordPress startup. MariaDB initializes its
+database and application user only when the data directory is empty.
+WordPress copies its source into the volume, creates `wp-config.php`, installs
+the site, and creates the second user on the first run. NGINX generates a
+self-signed certificate and runs in the foreground as PID 1.
+
+Only NGINX publishes port 443. WordPress PHP-FPM listens on the private Docker
+network at port 9000 and MariaDB is not published to the host.

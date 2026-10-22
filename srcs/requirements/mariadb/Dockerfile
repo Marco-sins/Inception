@@ -1,18 +1,7 @@
 FROM debian:12.11
-
-RUN apt-get update && apt-get install -y --no-install-recommends mariadb-server \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY conf/mariadb.conf /etc/mysql/mariadb.conf.d/50-server.cnf
-
-RUN mkdir -p /var/run/mysqld \
-    && chown -R mysql:mysql /var/run/mysqld \
-    && chmod 755 /var/run/mysqld
-
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends mariadb-server && rm -rf /var/lib/apt/lists/*
+COPY conf/server.cnf /etc/mysql/mariadb.conf.d/60-inception.cnf
+COPY tools/entrypoint.sh /usr/local/bin/mariadb-entrypoint
+RUN chmod +x /usr/local/bin/mariadb-entrypoint
 EXPOSE 3306
-
-COPY ./tools/mariadb.sh /usr/local/bin/
-
-RUN chmod +x /usr/local/bin/mariadb.sh
-
-ENTRYPOINT [ "/usr/local/bin/mariadb.sh" ]
+ENTRYPOINT ["mariadb-entrypoint"]

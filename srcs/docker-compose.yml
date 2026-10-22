@@ -1,69 +1,69 @@
-networks:
-  mmembrilnet:
-    name: mmembrilnet
-    driver: bridge
-
 services:
   nginx:
     container_name: nginx
+    image: nginx:1.26
     build: ./requirements/nginx
-    image: nginx
+    depends_on:
+      - wordpress
     ports:
       - "443:443"
     volumes:
       - wordpress_data:/var/www/html
-    restart: always
-    networks:
-      - mmembrilnet
-
-
-  mariadb:
-    container_name: mariadb
-    build:
-      context: ./requirements/mariadb
-    image: mariadb
-    volumes:
-      - mariadb_data:/var/lib/mysql
-    restart: always
-    networks:
-      - mmembrilnet
     env_file:
       - .env
-    healthcheck:
-      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u$${MYSQL_ROOT_USER} -p$${MYSQL_ROOT_PASSWORD} --silent"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-
+    restart: always
+    networks:
+      - inception
 
   wordpress:
     container_name: wordpress
+    image: wordpress:6.6
     build: ./requirements/wordpress
-    image: wordpress
     depends_on:
       mariadb:
         condition: service_healthy
     volumes:
       - wordpress_data:/var/www/html
-    restart: always
-    networks:
-      - mmembrilnet
     env_file:
       - .env
+    restart: always
+    networks:
+      - inception
 
+  mariadb:
+    container_name: mariadb
+    image: mariadb:10.11
+    build: ./requirements/mariadb
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u root -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: always
+    networks:
+      - inception
 
 volumes:
   mariadb_data:
+    name: inception_mariadb
     driver: local
     driver_opts:
       type: none
       device: /home/mmembril/data/mysql
       o: bind
-  
-
   wordpress_data:
+    name: inception_wordpress
     driver: local
     driver_opts:
       type: none
       device: /home/mmembril/data/wordpress
       o: bind
+
+networks:
+  inception:
+    name: inception
+    driver: bridge
