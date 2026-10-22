@@ -1,14 +1,21 @@
-COMPOSE := docker compose -f srcs/docker-compose.yml
+ifeq ($(shell docker compose version >/dev/null 2>&1; echo $$?),0)
+COMPOSE := docker compose
+else ifneq ($(shell command -v docker-compose 2>/dev/null),)
+COMPOSE := docker-compose
+else
+$(error Docker Compose is not installed. Install the Docker Compose plugin or docker-compose)
+endif
+
+COMPOSE := $(COMPOSE) -f srcs/docker-compose.yml
 DATA_DIR := /home/mmembril/data
 
 all: prepare
+	-$(COMPOSE) down --remove-orphans
 	$(COMPOSE) up -d --build
 
 prepare:
-	@sudo mkdir -p $(DATA_DIR)/mysql $(DATA_DIR)/wordpress
+	@mkdir -p $(DATA_DIR)/mysql $(DATA_DIR)/wordpress
 	@test -f srcs/.env || cp srcs/.env.example srcs/.env
-	@grep -q "mmembril.42.fr" /etc/hosts || \
-		echo "127.0.0.1 mmembril.42.fr" | sudo tee -a /etc/hosts >/dev/null
 
 up: all
 
@@ -16,14 +23,14 @@ down:
 	$(COMPOSE) down
 
 logs:
-	$(COMPOSE) logs -f
+	$(COMPOSE) logs --tail=100
 
 ps:
 	$(COMPOSE) ps
 
 clean:
 	$(COMPOSE) down --rmi local --volumes
-	sudo rm -rf $(DATA_DIR)
+	rm -rf $(DATA_DIR)
 
 fclean: clean
 

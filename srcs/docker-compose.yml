@@ -9,11 +9,11 @@ services:
       - "443:443"
     volumes:
       - wordpress_data:/var/www/html
-    env_file:
-      - .env
+    environment:
+      DOMAIN_NAME: ${DOMAIN_NAME}
     restart: always
     networks:
-      - inception
+      - mmembrilnet
 
   wordpress:
     container_name: wordpress
@@ -26,9 +26,11 @@ services:
       - wordpress_data:/var/www/html
     env_file:
       - .env
+    environment:
+      MYSQL_HOSTNAME: mariadb
     restart: always
     networks:
-      - inception
+      - mmembrilnet
 
   mariadb:
     container_name: mariadb
@@ -39,13 +41,13 @@ services:
     env_file:
       - .env
     healthcheck:
-      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u root -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      test: ["CMD-SHELL", "mariadb -h 127.0.0.1 -u\"$${MYSQL_USER}\" -p\"$${MYSQL_PASSWORD}\" -D \"$${MYSQL_DATABASE}\" -e 'SELECT 1' >/dev/null 2>&1"]
       interval: 5s
       timeout: 5s
       retries: 30
     restart: always
     networks:
-      - inception
+      - mmembrilnet
 
 volumes:
   mariadb_data:
@@ -64,6 +66,6 @@ volumes:
       o: bind
 
 networks:
-  inception:
-    name: inception
+  mmembrilnet:
+    name: mmembrilnet
     driver: bridge

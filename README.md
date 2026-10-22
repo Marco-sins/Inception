@@ -11,7 +11,7 @@ three services, each in its own custom Debian-based image:
 - **WordPress** runs PHP-FPM and serves the website.
 - **MariaDB** stores the WordPress database.
 
-The services use a private Docker bridge network. WordPress files and the
+The services use the private Docker bridge network `mmembrilnet`. WordPress files and the
 database are stored in two named volumes backed by `/home/mmembril/data`.
 Only the mandatory part of the subject is implemented; the bonus services are
 intentionally out of scope.
@@ -37,8 +37,9 @@ so no private key is committed.
 
 ### Prerequisites
 
-Use a Linux virtual machine with Docker Engine, the Docker Compose plugin,
-`make`, and `sudo`. Add the current user to the `docker` group if needed.
+Use a Linux virtual machine with Docker Engine, either the Docker Compose
+plugin or the `docker-compose` command, and `make`. Add the current user to
+the `docker` group if needed.
 
 ### Start and stop
 
@@ -51,10 +52,11 @@ make logs
 make down
 ```
 
-`make` creates the persistent directories, prepares the local
-`mmembril.42.fr` host entry, builds all images, and starts the stack. The first
-run copies `srcs/.env.example` to the ignored `srcs/.env`; replace every
-placeholder password before starting.
+`make` creates the persistent directories, builds all images, and starts the
+stack. The first run copies `srcs/.env.example` to the ignored `srcs/.env`;
+replace every placeholder password before starting. When using a VM, map
+`mmembril.42.fr` to the VM IP address in the `/etc/hosts` file of the machine
+running the browser. Use `127.0.0.1` only when the browser runs inside the VM.
 
 Open `https://mmembril.42.fr` and accept the warning for the self-signed
 certificate. The administration panel is at `https://mmembril.42.fr/wp-admin`.

@@ -29,9 +29,26 @@ make ps
 make logs
 ```
 
+`make logs` shows the latest 100 lines without following the stream. This is
+intentional because the legacy `docker-compose` v1 client can raise a
+`KeyError: 'id'` while following Docker Engine events. Use
+`docker compose logs -f` only when the Compose v2 plugin is installed.
+
 ## Website and administration
 
-Add `127.0.0.1 mmembril.42.fr` to `/etc/hosts` if `make` could not do so.
+Find the VM address with:
+
+```sh
+ip -4 addr show
+```
+
+If the browser runs inside the VM, add `127.0.0.1 mmembril.42.fr` to the VM's
+`/etc/hosts`. If the browser runs on the host computer, add the VM's address
+instead, for example `192.168.56.101 mmembril.42.fr`, to the host computer's
+`/etc/hosts`. The VM network adapter must be reachable from the host
+(bridged networking or a host-only adapter), or port 443 must be forwarded
+from the host to the VM.
+
 Visit:
 
 - Website: `https://mmembril.42.fr`
