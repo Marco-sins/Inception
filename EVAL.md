@@ -1,14 +1,14 @@
-# Inception - evaluation study guide
+# Inception - guía de estudio para la evaluación
 
-This document is a practical study guide for defending the mandatory part of
-the Inception project. It is not a replacement for understanding the source
-code: during the evaluation, explain what each command and service does.
+Este documento es una guía práctica de estudio para defender la parte
+obligatoria del proyecto Inception. No sustituye la comprensión del código
+fuente: durante la evaluación, explica qué hace cada comando y servicio.
 
-## 1. Preliminary checks
+## 1. Comprobaciones preliminares
 
-### Repository and required files
+### Repositorio y archivos requeridos
 
-The repository must contain:
+El repositorio debe contener:
 
 ```text
 Makefile
@@ -24,25 +24,25 @@ srcs/
     mariadb/Dockerfile
 ```
 
-The real `srcs/.env` is created locally and ignored by Git. Never commit
-passwords, API keys, certificates, or private keys. The tracked
-`srcs/.env.example` contains placeholders only.
+El `srcs/.env` real se crea localmente y Git lo ignora. Nunca subas
+contraseñas, claves API, certificados o claves privadas. El archivo
+`srcs/.env.example` versionado solo contiene marcadores de posición.
 
-Before an evaluation, check that no secret is tracked:
+Antes de una evaluación, comprueba que no haya ningún secreto versionado:
 
 ```sh
 git ls-files | grep -E '(^|/)(\.env|.*secret.*|.*credential.*)$' || true
 git grep -nE 'PASSWORD=|PASS=|API_KEY=|PRIVATE KEY' -- ':!srcs/.env.example' || true
 ```
 
-The evaluator and the student must both be present. If a requirement is
-unclear, ask the evaluated student to demonstrate it rather than guessing.
+El evaluador y el estudiante deben estar presentes. Si un requisito no está
+claro, pide al estudiante evaluado que lo demuestre en lugar de adivinar.
 
-### Clean Docker state
+### Limpiar el estado de Docker
 
-The subject proposes cleaning Docker before evaluating. This is destructive:
-it removes all local containers, images, volumes, and networks, not only this
-project. Run it only on a dedicated evaluation machine:
+El tema propone limpiar Docker antes de evaluar. Esto es destructivo:
+elimina todos los contenedores, imágenes, volúmenes y redes locales, no solo
+los de este proyecto. Ejecútalo únicamente en una máquina dedicada a la evaluación:
 
 ```sh
 docker stop $(docker ps -qa)
@@ -52,9 +52,9 @@ docker volume rm $(docker volume ls -q)
 docker network rm $(docker network ls -q) 2>/dev/null
 ```
 
-## 2. General static checks
+## 2. Comprobaciones estáticas generales
 
-Run these checks from the repository root:
+Ejecuta estas comprobaciones desde la raíz del repositorio:
 
 ```sh
 test -f Makefile
@@ -63,24 +63,24 @@ find srcs -name Dockerfile -print
 docker compose -f srcs/docker-compose.yml config
 ```
 
-The Compose file must contain a user-defined network and must not contain
-`network: host`, `links:`, or `--link`:
+El archivo Compose debe contener una red definida por el usuario y no debe contener
+`network: host`, `links:` o `--link`:
 
 ```sh
 grep -nE 'networks:|network_mode:|links:|--link|host' \
   srcs/docker-compose.yml Makefile srcs/requirements || true
 ```
 
-Review every Dockerfile and script:
+Revisa cada Dockerfile y script:
 
 ```sh
 grep -RniE 'tail[[:space:]]+-f|sleep infinity|while[[:space:]]+true|bash$|sh$' \
   srcs/requirements Makefile || true
 ```
 
-An entrypoint script may use `#!/bin/sh`, but it must run a real foreground
-daemon with `exec`; it must not keep a container alive with an infinite loop.
-The project uses:
+Un script de entrada puede usar `#!/bin/sh`, pero debe ejecutar un demonio
+real en primer plano con `exec`; no debe mantener un contenedor activo con un
+bucle infinito. El proyecto usa:
 
 ```text
 NGINX      -> nginx -g "daemon off;"
@@ -88,95 +88,96 @@ WordPress  -> php-fpm8.2 -F
 MariaDB    -> mariadbd --user=mysql
 ```
 
-## 3. Concepts to explain
+## 3. Conceptos que debes explicar
 
-### Docker and Docker Compose
+### Docker y Docker Compose
 
-Docker packages an application and its dependencies in an image. A container
-is a running instance of an image with an isolated filesystem, processes,
-network namespace, and resource configuration. Containers share the host
-kernel, so they are lighter than virtual machines.
+Docker empaqueta una aplicación y sus dependencias en una imagen. Un contenedor
+es una instancia en ejecución de una imagen con un sistema de archivos,
+procesos, espacio de nombres de red y configuración de recursos aislados. Los
+contenedores comparten el kernel del host, por lo que son más ligeros que las
+máquinas virtuales.
 
-Docker Compose is the declarative orchestration layer. The YAML file defines
-services, builds, networks, volumes, dependencies, environment variables, and
-published ports. Compose creates the resources and gives services DNS names
-matching their service names.
+Docker Compose es la capa de orquestación declarativa. El archivo YAML define
+servicios, compilaciones, redes, volúmenes, dependencias, variables de entorno
+y puertos publicados. Compose crea los recursos y asigna a los servicios
+nombres DNS que coinciden con sus nombres de servicio.
 
-### Image with and without Compose
+### Imagen con y sin Compose
 
-Without Compose, each image/container must be built and started manually:
+Sin Compose, cada imagen/contenedor debe compilarse e iniciarse manualmente:
 
 ```sh
 docker build -t nginx:1.26 srcs/requirements/nginx
 docker run --name nginx_inception -p 443:443 ...
 ```
 
-With Compose, the same configuration is reproducible:
+Con Compose, la misma configuración es reproducible:
 
 ```sh
 docker compose -f srcs/docker-compose.yml up -d --build
 ```
 
-Compose does not change what an image is. It automates the relationship
-between several containers and keeps their configuration in one place.
+Compose no cambia lo que es una imagen. Automatiza la relación entre varios
+contenedores y mantiene su configuración en un solo lugar.
 
-### Docker versus virtual machines
+### Docker frente a máquinas virtuales
 
-Docker containers start quickly, use fewer resources, and share the host
-kernel. A virtual machine contains a complete guest operating system and
-kernel, so it generally uses more RAM and disk but provides stronger
-isolation. This project uses a VM as required by the subject and Docker inside
-that VM for the services.
+Los contenedores Docker se inician rápidamente, utilizan menos recursos y
+comparten el kernel del host. Una máquina virtual contiene un sistema operativo
+y un kernel invitados completos, por lo que generalmente usa más RAM y disco,
+pero proporciona un aislamiento más fuerte. Este proyecto usa una VM como
+requiere el tema y Docker dentro de esa VM para los servicios.
 
-### Docker network
+### Red de Docker
 
-`inception` is a user-defined bridge network. Containers attached to it can
-resolve service names through Docker DNS:
+`inception` es una red puente definida por el usuario. Los contenedores
+conectados a ella pueden resolver nombres de servicio mediante el DNS de Docker:
 
 ```text
 wordpress -> mariadb:3306
 nginx     -> wordpress:9000
 ```
 
-The database and PHP-FPM ports are not published on the host. Only NGINX is
-published on port 443.
+Los puertos de la base de datos y PHP-FPM no se publican en el host. Solo
+NGINX se publica en el puerto 443.
 
-### Docker volumes
+### Volúmenes de Docker
 
-The project has two named volumes:
+El proyecto tiene dos volúmenes con nombre:
 
 ```text
 html      -> /home/mmembril/data/html
 database  -> /home/mmembril/data/database
 ```
 
-The local volume driver binds these host directories while the application
-uses Docker volume names. This keeps WordPress files and the MariaDB database
-outside the disposable container layers.
+El controlador de volúmenes local vincula estos directorios del host mientras
+la aplicación usa nombres de volúmenes Docker. Esto mantiene los archivos de
+WordPress y la base de datos MariaDB fuera de las capas desechables del contenedor.
 
-## 4. Start and inspect the project
+## 4. Iniciar e inspeccionar el proyecto
 
-Create local configuration from the example and replace placeholders:
+Crea la configuración local a partir del ejemplo y reemplaza los marcadores:
 
 ```sh
 cp srcs/.env.example srcs/.env
 $EDITOR srcs/.env
 ```
 
-The administrator username must not contain `admin` or `administrator`.
-The administrator and normal WordPress user must use different email
-addresses.
+El nombre de usuario del administrador no debe contener `admin` ni
+`administrator`. El administrador y el usuario normal de WordPress deben usar
+direcciones de correo electrónico diferentes.
 
-Start the mandatory stack:
+Inicia la pila obligatoria:
 
 ```sh
 make
 ```
 
-The Makefile prepares the persistent directories and runs Docker Compose. A
-successful run must not end with a Make error.
+El Makefile prepara los directorios persistentes y ejecuta Docker Compose. Una
+ejecución correcta no debe terminar con un error de Make.
 
-Inspect services:
+Inspecciona los servicios:
 
 ```sh
 docker compose -f srcs/docker-compose.yml ps
@@ -184,7 +185,7 @@ docker ps
 docker compose -f srcs/docker-compose.yml logs --tail=100
 ```
 
-The expected containers are:
+Los contenedores esperados son:
 
 ```text
 nginx_inception
@@ -192,133 +193,133 @@ wordpress_inception
 db_inception
 ```
 
-The expected state is that all three are running and MariaDB is healthy.
+El estado esperado es que los tres estén en ejecución y MariaDB esté saludable.
 
-If the VM only provides Compose v1, use `docker-compose` consistently in the
-commands above. The project Makefile detects either `docker compose` or
-`docker-compose`.
+Si la VM solo proporciona Compose v1, usa `docker-compose` de forma coherente
+en los comandos anteriores. El Makefile del proyecto detecta tanto `docker compose`
+como `docker-compose`.
 
-## 5. NGINX and TLS checks
+## 5. Comprobaciones de NGINX y TLS
 
-Only NGINX publishes port 443:
+Solo NGINX publica el puerto 443:
 
 ```sh
 docker compose -f srcs/docker-compose.yml ps
 ss -lnt | grep ':443'
 ```
 
-The expected published port is:
+El puerto publicado esperado es:
 
 ```text
 0.0.0.0:443->443/tcp
 ```
 
-Port 80 must not be open:
+El puerto 80 no debe estar abierto:
 
 ```sh
 curl -I http://mmembril.42.fr
 ```
 
-The HTTPS request must work. Because the certificate is self-signed, `-k` is
-used for testing:
+La solicitud HTTPS debe funcionar. Como el certificado es autofirmado, se usa
+`-k` para las pruebas:
 
 ```sh
 curl -k -I https://mmembril.42.fr
 curl -k -I https://mmembril.42.fr:443
 ```
 
-Port `433` is not the HTTPS port; `443` is.
+El puerto `433` no es el puerto HTTPS; `443` sí lo es.
 
-Check the enabled protocols:
+Comprueba los protocolos habilitados:
 
 ```sh
 docker exec nginx_inception nginx -T 2>/dev/null | grep ssl_protocols
 ```
 
-The result must contain only:
+El resultado debe contener únicamente:
 
 ```text
 ssl_protocols TLSv1.2 TLSv1.3;
 ```
 
-The browser URL is:
+La URL del navegador es:
 
 ```text
 https://mmembril.42.fr
 ```
 
-If the browser runs on the host while Docker runs in a VM, put the VM IP in
-the host's `/etc/hosts`, for example:
+Si el navegador se ejecuta en el host mientras Docker se ejecuta en una VM,
+añade la IP de la VM al `/etc/hosts` del host, por ejemplo:
 
 ```text
 172.16.47.132 mmembril.42.fr
 ```
 
-Use `127.0.0.1` only when the browser runs inside the VM.
+Usa `127.0.0.1` solo cuando el navegador se ejecute dentro de la VM.
 
-## 6. WordPress and PHP-FPM checks
+## 6. Comprobaciones de WordPress y PHP-FPM
 
-The WordPress Dockerfile must install PHP-FPM and must not install NGINX:
+El Dockerfile de WordPress debe instalar PHP-FPM y no debe instalar NGINX:
 
 ```sh
 grep -nE 'FROM|php.*fpm|nginx' srcs/requirements/wordpress/Dockerfile
 docker exec wordpress_inception php-fpm8.2 -t
 ```
 
-Check that PHP-FPM listens on the private network port:
+Comprueba que PHP-FPM escucha en el puerto de la red privada:
 
 ```sh
 docker exec wordpress_inception sh -c \
   "grep -E '^listen[[:space:]]*=' /etc/php/8.2/fpm/pool.d/www.conf"
 ```
 
-Expected:
+Resultado esperado:
 
 ```text
 listen = 0.0.0.0:9000
 ```
 
-The site must be installed, not show the WordPress installation screen:
+El sitio debe estar instalado; no debe mostrar la pantalla de instalación de WordPress:
 
 ```sh
 docker exec wordpress_inception wp core is-installed --allow-root
 docker exec wordpress_inception wp user list --allow-root
 ```
 
-There must be two users. The administrator username must not include
-`admin`/`Admin` or `administrator`/`Administrator`.
+Debe haber dos usuarios. El nombre de usuario del administrador no debe incluir
+`admin`/`Admin` ni `administrator`/`Administrator`.
 
-From the browser:
+Desde el navegador:
 
-1. Open `https://mmembril.42.fr`.
-2. Log in at `https://mmembril.42.fr/wp-admin`.
-3. Create or edit a page.
-4. Publish it.
-5. Open the page as a visitor and verify the change.
-6. Add a comment with the normal WordPress user and verify it.
+1. Abre `https://mmembril.42.fr`.
+2. Inicia sesión en `https://mmembril.42.fr/wp-admin`.
+3. Crea o edita una página.
+4. Publícala.
+5. Abre la página como visitante y verifica el cambio.
+6. Añade un comentario con el usuario normal de WordPress y verifícalo.
 
-## 7. MariaDB and database checks
+## 7. Comprobaciones de MariaDB y de la base de datos
 
-MariaDB must have its own Dockerfile and must not contain NGINX:
+MariaDB debe tener su propio Dockerfile y no debe contener NGINX:
 
 ```sh
 grep -nE 'FROM|nginx' srcs/requirements/mariadb/Dockerfile
 ```
 
-Check the database volume:
+Comprueba el volumen de la base de datos:
 
 ```sh
 docker volume ls
 docker volume inspect database
 ```
 
-The inspection must show the required host path:
+La inspección debe mostrar la ruta requerida del host:
 
 ```text
 /home/mmembril/data/database
 ```
 
-Connect using the credentials in the local, ignored `srcs/.env`:
+Conéctate usando las credenciales del `srcs/.env` local e ignorado:
 
 ```sh
 set -a
@@ -328,16 +329,16 @@ docker exec -it db_inception \
   mariadb -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"
 ```
 
-Inside the container, the variables are available through Compose. A direct
-example using the values from `.env` is:
+Dentro del contenedor, las variables están disponibles mediante Compose. Un
+ejemplo directo usando los valores de `.env` es:
 
 ```sh
 docker exec -it db_inception \
   mariadb -uwordpress_user -ppassdb wordpress
 ```
 
-Do not put real credentials in this document or in Git. The database should
-contain WordPress tables:
+No pongas credenciales reales en este documento ni en Git. La base de datos
+debe contener tablas de WordPress:
 
 ```sql
 SHOW DATABASES;
@@ -346,19 +347,19 @@ SHOW TABLES;
 SELECT ID, user_login, user_email FROM wp_users;
 ```
 
-The exact table prefix can differ; inspect `wp-config.php` if necessary.
+El prefijo exacto de las tablas puede variar; inspecciona `wp-config.php` si es necesario.
 
-## 8. Persistence test
+## 8. Prueba de persistencia
 
-Make a visible change in WordPress first, then restart the VM or at least the
-Docker services:
+Primero haz un cambio visible en WordPress y después reinicia la VM o al menos
+los servicios Docker:
 
 ```sh
 docker compose -f srcs/docker-compose.yml down
 make
 ```
 
-After startup, verify:
+Después del inicio, verifica:
 
 ```sh
 docker compose -f srcs/docker-compose.yml ps
@@ -366,44 +367,44 @@ docker volume inspect html
 docker volume inspect database
 ```
 
-The edited page, users, comments, and database tables must still exist. The
-host directories must contain data:
+La página editada, los usuarios, los comentarios y las tablas de la base de
+datos deben seguir existiendo. Los directorios del host deben contener datos:
 
 ```sh
 find /home/mmembril/data/html -maxdepth 2 -type f | head
 find /home/mmembril/data/database -maxdepth 2 -type f | head
 ```
 
-Do not use `make clean` for this test: it intentionally removes the persistent
-data.
+No uses `make clean` para esta prueba: elimina intencionadamente los datos
+persistentes.
 
-## 9. Mandatory checklist
+## 9. Lista de comprobación obligatoria
 
-Before the defense, confirm every item:
+Antes de la defensa, confirma cada elemento:
 
-- [ ] `Makefile` is at the repository root.
-- [ ] All application files are under `srcs/`.
-- [ ] `srcs/.env` is local and ignored.
-- [ ] No password is in a Dockerfile or tracked file.
-- [ ] One custom Dockerfile exists for each service.
-- [ ] Each Dockerfile starts from Debian or Alpine.
-- [ ] Images are built locally and use explicit non-`latest` tags.
-- [ ] Three dedicated containers run.
-- [ ] The user-defined `inception` network is present.
-- [ ] No `host` network, `links`, or `--link` is used.
-- [ ] No infinite loop, `tail -f`, or `sleep infinity` is used.
-- [ ] Only NGINX publishes port 443.
-- [ ] Port 80 is not exposed.
-- [ ] TLS is restricted to 1.2 and 1.3.
-- [ ] WordPress uses PHP-FPM and contains no NGINX.
-- [ ] MariaDB contains no NGINX.
-- [ ] WordPress is already installed.
-- [ ] There are two WordPress users.
-- [ ] The administrator name contains neither `admin` nor `administrator`.
-- [ ] MariaDB has a non-empty WordPress database.
-- [ ] The two named volumes persist under `/home/mmembril/data/`.
-- [ ] A page edit and a comment can be verified.
-- [ ] Data survives a restart.
+- [ ] `Makefile` está en la raíz del repositorio.
+- [ ] Todos los archivos de la aplicación están bajo `srcs/`.
+- [ ] `srcs/.env` es local y está ignorado.
+- [ ] No hay ninguna contraseña en un Dockerfile ni en un archivo versionado.
+- [ ] Existe un Dockerfile personalizado para cada servicio.
+- [ ] Cada Dockerfile parte de Debian o Alpine.
+- [ ] Las imágenes se compilan localmente y usan etiquetas explícitas distintas de `latest`.
+- [ ] Se ejecutan tres contenedores dedicados.
+- [ ] Está presente la red `inception` definida por el usuario.
+- [ ] No se usa la red `host`, `links` ni `--link`.
+- [ ] No se usa ningún bucle infinito, `tail -f` ni `sleep infinity`.
+- [ ] Solo NGINX publica el puerto 443.
+- [ ] El puerto 80 no está expuesto.
+- [ ] TLS está restringido a 1.2 y 1.3.
+- [ ] WordPress usa PHP-FPM y no contiene NGINX.
+- [ ] MariaDB no contiene NGINX.
+- [ ] WordPress ya está instalado.
+- [ ] Hay dos usuarios de WordPress.
+- [ ] El nombre del administrador no contiene `admin` ni `administrator`.
+- [ ] MariaDB tiene una base de datos de WordPress no vacía.
+- [ ] Los dos volúmenes con nombre persisten bajo `/home/mmembril/data/`.
+- [ ] Se pueden verificar una edición de página y un comentario.
+- [ ] Los datos sobreviven a un reinicio.
 
-The mandatory part is complete without adding the bonus services such as FTP,
-Redis, Adminer, or Portainer.
+La parte obligatoria está completa sin añadir servicios adicionales como FTP,
+Redis, Adminer o Portainer.
