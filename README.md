@@ -11,7 +11,7 @@ three services, each in its own custom Debian-based image:
 - **WordPress** runs PHP-FPM and serves the website.
 - **MariaDB** stores the WordPress database.
 
-The services use the private Docker bridge network `mmembrilnet`. WordPress files and the
+The services use the private Docker bridge network `inception`. WordPress files and the
 database are stored in two named volumes backed by `/home/mmembril/data`.
 Only the mandatory part of the subject is implemented; the bonus services are
 intentionally out of scope.

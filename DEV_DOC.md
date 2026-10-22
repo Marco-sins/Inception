@@ -35,9 +35,11 @@ The normal workflow is:
 make
 ```
 
-The Makefile creates `/home/mmembril/data/mysql` and
-`/home/mmembril/data/wordpress`, then runs the available Compose command with
-`up -d --build`. It does not use `sudo` or modify `/etc/hosts`; add the local
+The Makefile creates `/home/mmembril/data/database` and
+`/home/mmembril/data/html`, then lets Docker Compose build and start the
+services. Compose creates the `inception` bridge network and waits for
+MariaDB's healthcheck before starting WordPress. This does not use `sudo` or
+modify `/etc/hosts`; add the local
 domain manually when necessary. Before starting, `make` removes old
 containers with `down --remove-orphans`; this keeps named volumes and avoids a
 known Docker Compose v1 recreation error (`KeyError: ContainerConfig`).
@@ -76,13 +78,13 @@ discarded.
 
 ## Persistence and runtime details
 
-The named volumes are `inception_mariadb` and `inception_wordpress`. Their local
+The named volumes are `database` and `html`. Their local
 driver stores data at:
 
-- `/home/mmembril/data/mysql` for MariaDB.
-- `/home/mmembril/data/wordpress` for WordPress files.
+- `/home/mmembril/data/database` for MariaDB.
+- `/home/mmembril/data/html` for WordPress files.
 
-The services communicate through the user-defined `mmembrilnet` bridge network;
+The services communicate through the user-defined `inception` bridge network;
 Compose DNS resolves `mariadb` and `wordpress` to the corresponding
 containers. The `mariadb` healthcheck gates WordPress startup. WordPress validates its
 PHP-FPM configuration before running in the foreground. MariaDB initializes its

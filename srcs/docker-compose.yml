@@ -1,6 +1,6 @@
 services:
   nginx:
-    container_name: nginx
+    container_name: nginx_inception
     image: nginx:1.26
     build: ./requirements/nginx
     depends_on:
@@ -8,36 +8,36 @@ services:
     ports:
       - "443:443"
     volumes:
-      - wordpress_data:/var/www/html
+      - html:/var/www/html
     environment:
       DOMAIN_NAME: ${DOMAIN_NAME}
     restart: always
     networks:
-      - mmembrilnet
+      - inception
 
   wordpress:
-    container_name: wordpress
+    container_name: wordpress_inception
     image: wordpress:6.6
     build: ./requirements/wordpress
     depends_on:
       mariadb:
         condition: service_healthy
     volumes:
-      - wordpress_data:/var/www/html
+      - html:/var/www/html
     env_file:
       - .env
     environment:
       MYSQL_HOSTNAME: mariadb
     restart: always
     networks:
-      - mmembrilnet
+      - inception
 
   mariadb:
-    container_name: mariadb
+    container_name: db_inception
     image: mariadb:10.11
     build: ./requirements/mariadb
     volumes:
-      - mariadb_data:/var/lib/mysql
+      - database:/var/lib/mysql
     env_file:
       - .env
     healthcheck:
@@ -47,25 +47,25 @@ services:
       retries: 30
     restart: always
     networks:
-      - mmembrilnet
+      - inception
 
 volumes:
-  mariadb_data:
-    name: inception_mariadb
+  database:
+    name: database
     driver: local
     driver_opts:
       type: none
-      device: /home/mmembril/data/mysql
+      device: /home/mmembril/data/database
       o: bind
-  wordpress_data:
-    name: inception_wordpress
+  html:
+    name: html
     driver: local
     driver_opts:
       type: none
-      device: /home/mmembril/data/wordpress
+      device: /home/mmembril/data/html
       o: bind
 
 networks:
-  mmembrilnet:
-    name: mmembrilnet
+  inception:
+    name: inception
     driver: bridge

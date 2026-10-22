@@ -10,11 +10,11 @@ COMPOSE := $(COMPOSE) -f srcs/docker-compose.yml
 DATA_DIR := /home/mmembril/data
 
 all: prepare
-	-$(COMPOSE) down --remove-orphans
+	@$(COMPOSE) down --remove-orphans >/dev/null 2>&1 || true
 	$(COMPOSE) up -d --build
 
 prepare:
-	@mkdir -p $(DATA_DIR)/mysql $(DATA_DIR)/wordpress
+	@mkdir -p $(DATA_DIR)/database $(DATA_DIR)/html
 	@test -f srcs/.env || cp srcs/.env.example srcs/.env
 
 up: all
