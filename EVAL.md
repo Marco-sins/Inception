@@ -108,8 +108,8 @@ nombres DNS que coinciden con sus nombres de servicio.
 Sin Compose, cada imagen/contenedor debe compilarse e iniciarse manualmente:
 
 ```sh
-docker build -t nginx:1.26 srcs/requirements/nginx
-docker run --name nginx_inception -p 443:443 ...
+docker build -t nginx:1.0 srcs/requirements/nginx
+docker run --name nginx -p 443:443 ...
 ```
 
 Con Compose, la misma configuración es reproducible:
@@ -188,9 +188,9 @@ docker compose -f srcs/docker-compose.yml logs --tail=100
 Los contenedores esperados son:
 
 ```text
-nginx_inception
-wordpress_inception
-db_inception
+nginx
+wordpress
+mariadb
 ```
 
 El estado esperado es que los tres estén en ejecución y MariaDB esté saludable.
@@ -233,7 +233,7 @@ El puerto `433` no es el puerto HTTPS; `443` sí lo es.
 Comprueba los protocolos habilitados:
 
 ```sh
-docker exec nginx_inception nginx -T 2>/dev/null | grep ssl_protocols
+docker exec nginx nginx -T 2>/dev/null | grep ssl_protocols
 ```
 
 El resultado debe contener únicamente:
@@ -263,13 +263,13 @@ El Dockerfile de WordPress debe instalar PHP-FPM y no debe instalar NGINX:
 
 ```sh
 grep -nE 'FROM|php.*fpm|nginx' srcs/requirements/wordpress/Dockerfile
-docker exec wordpress_inception php-fpm8.2 -t
+docker exec wordpress php-fpm8.2 -t
 ```
 
 Comprueba que PHP-FPM escucha en el puerto de la red privada:
 
 ```sh
-docker exec wordpress_inception sh -c \
+docker exec wordpress sh -c \
   "grep -E '^listen[[:space:]]*=' /etc/php/8.2/fpm/pool.d/www.conf"
 ```
 
@@ -282,8 +282,8 @@ listen = 0.0.0.0:9000
 El sitio debe estar instalado; no debe mostrar la pantalla de instalación de WordPress:
 
 ```sh
-docker exec wordpress_inception wp core is-installed --allow-root
-docker exec wordpress_inception wp user list --allow-root
+docker exec wordpress wp core is-installed --allow-root
+docker exec wordpress wp user list --allow-root
 ```
 
 Debe haber dos usuarios. El nombre de usuario del administrador no debe incluir
@@ -325,7 +325,7 @@ Conéctate usando las credenciales del `srcs/.env` local e ignorado:
 set -a
 . srcs/.env
 set +a
-docker exec -it db_inception \
+docker exec -it mariadb \
   mariadb -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"
 ```
 
@@ -333,7 +333,7 @@ Dentro del contenedor, las variables están disponibles mediante Compose. Un
 ejemplo directo usando los valores de `.env` es:
 
 ```sh
-docker exec -it db_inception \
+docker exec -it mariadb \
   mariadb -uwordpress_user -ppassdb wordpress
 ```
 
@@ -408,3 +408,116 @@ Antes de la defensa, confirma cada elemento:
 
 La parte obligatoria está completa sin añadir servicios adicionales como FTP,
 Redis, Adminer o Portainer.
+
+## 10. Guion corto para la defensa
+
+La evaluación no consiste solo en enseñar que los contenedores están encendidos.
+El estudiante debe poder explicar y demostrar cada decisión importante:
+
+1. `docker-compose.yml` define tres servicios independientes: `nginx`,
+   `wordpress` y `mariadb`.
+2. Cada servicio se construye con su propio Dockerfile desde Debian o Alpine.
+3. `build:` usa los Dockerfiles locales. Las etiquetas de `image:` son explícitas
+   y no usan `latest`; no deben confundirse con imágenes oficiales de aplicación.
+4. NGINX es el único servicio publicado al host y termina TLS en el puerto 443.
+5. WordPress habla con PHP-FPM por `wordpress:9000` y con MariaDB por
+   `mariadb:3306`, usando el DNS interno de la red Docker.
+6. MariaDB y WordPress permanecen en primer plano con un proceso real como PID 1;
+   no se mantiene ningún contenedor vivo con `tail`, `sleep infinity` o un bucle.
+7. Los datos sobreviven a `docker compose down` y a un reinicio, pero se eliminan
+   intencionadamente con `make clean`.
+
+Durante la defensa conviene mostrar primero la configuración y después el estado:
+
+```sh
+docker compose -f srcs/docker-compose.yml config
+make
+make ps
+docker compose -f srcs/docker-compose.yml logs --tail=100
+docker network inspect inception
+docker volume inspect database
+docker volume inspect html
+```
+
+## 11. Pruebas funcionales que deben hacerse
+
+Con la pila arrancada, verifica también el comportamiento real:
+
+```sh
+curl -k -I https://mmembril.42.fr
+curl -k -I https://mmembril.42.fr/wp-admin
+docker exec nginx nginx -T 2>/dev/null | grep ssl_protocols
+docker exec wordpress php-fpm8.2 -t
+docker exec wordpress wp core is-installed --allow-root
+docker exec wordpress wp user list --allow-root
+docker exec mariadb mariadb -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" \
+  -D "$MYSQL_DATABASE" -e 'SHOW TABLES;'
+```
+
+La prueba de persistencia debe hacerse sin `make clean`:
+
+```sh
+docker compose -f srcs/docker-compose.yml down
+make
+docker exec wordpress wp user list --allow-root
+```
+
+La página, los usuarios y la base de datos deben seguir disponibles después de
+ese reinicio.
+
+## 12. Comprobaciones previas a la entrega
+
+Antes de entregar, confirma lo siguiente:
+
+- El trabajo se ejecutará dentro de una máquina virtual.
+- `DOMAIN_NAME` tiene el formato `<login>.42.fr` y coincide con el login real.
+- `/home/<login>/data` coincide con el usuario de la evaluación, no con otro
+  nombre de usuario.
+- `srcs/.env` existe localmente, contiene valores reales y no está versionado.
+- No hay contraseñas, certificados, claves privadas ni credenciales en Git.
+- Se han probado credenciales diferentes para root de MariaDB, el usuario de la
+  base de datos, el administrador de WordPress y el segundo usuario.
+- El usuario administrador no contiene `admin` ni `administrator`, en ninguna
+  combinación de mayúsculas y minúsculas.
+- Hay exactamente dos usuarios de WordPress al terminar la instalación inicial.
+- El puerto 80 no está publicado y MariaDB/PHP-FPM no están publicados al host.
+- El certificado puede ser autofirmado, pero HTTPS funciona y solo permite TLS 1.2
+  y TLS 1.3.
+- Los directorios persistentes contienen datos después de la primera ejecución.
+- `make`, `make down` y `make clean` tienen comportamientos entendidos antes de
+  mostrarlos al evaluador.
+
+Si Docker no está instalado o el proyecto no se ha probado en la VM, no se puede
+afirmar que la entrega funcione aunque el análisis estático sea correcto. La
+prueba mínima de aceptación es ejecutar `make` desde un estado limpio y comprobar
+la web, los dos usuarios, la base de datos y la persistencia.
+
+## 13. Preguntas habituales
+
+### ¿Por qué hay una etiqueta en `image:`?
+
+`image: nginx` equivale a `nginx:latest`, y el subject prohíbe `latest`. Por eso
+se usan etiquetas explícitas como `nginx:1.0`, `wordpress:1.0` y `mariadb:1.0`.
+Con `build:` Compose construye las imágenes locales; no se debe ejecutar un
+`docker pull` de esas imágenes de aplicación.
+
+### ¿Por qué se usan volúmenes con `driver_opts`?
+
+El subject exige simultáneamente volúmenes Docker con nombre y almacenamiento en
+`/home/<login>/data`. El controlador `local` con `driver_opts` permite conservar
+el nombre Docker y apuntar sus datos a esa ruta. El evaluador puede pedir que se
+muestre `docker volume inspect`; la ruta `Mountpoint` o las opciones del volumen
+deben corresponder al usuario correcto.
+
+### ¿Qué ocurre si el evaluador empieza sin `.env`?
+
+`make prepare` puede crear `srcs/.env` desde el ejemplo, pero el ejemplo no debe
+contener credenciales reales. Hay que editar `.env` y rellenar todos los valores
+antes de arrancar la primera vez. No se deben enseñar ni entregar las
+credenciales reales en Git.
+
+### ¿Qué debe poder explicar el estudiante?
+
+Debe poder describir `ENTRYPOINT`, `exec`, PID 1, la red puente, la resolución DNS
+por nombre de servicio, los dos volúmenes, `depends_on`/healthcheck, el flujo
+HTTPS -> NGINX -> PHP-FPM -> MariaDB y la diferencia entre `down` y `clean`.
