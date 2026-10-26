@@ -1,7 +1,7 @@
 services:
   nginx:
     container_name: nginx
-    image: nginx:1.0
+    image: nginx
     build: ./requirements/nginx
     depends_on:
       - wordpress
@@ -17,7 +17,7 @@ services:
 
   wordpress:
     container_name: wordpress
-    image: wordpress:1.0
+    image: wordpress
     build: ./requirements/wordpress
     depends_on:
       mariadb:
@@ -34,7 +34,7 @@ services:
 
   mariadb:
     container_name: mariadb
-    image: mariadb:1.0
+    image: mariadb
     build: ./requirements/mariadb
     volumes:
       - database:/var/lib/mysql

@@ -1,4 +1,4 @@
-FROM debian:12.11
+FROM debian:bookworm
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends mariadb-server && rm -rf /var/lib/apt/lists/*
 COPY conf/server.cnf /etc/mysql/mariadb.conf.d/60-inception.cnf
 COPY tools/entrypoint.sh /usr/local/bin/mariadb-entrypoint
