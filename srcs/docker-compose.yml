@@ -55,14 +55,14 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: /home/mmembril/data/database
+      device: ${DATA_DIR:-/home/mmembril/data}/database
       o: bind
   html:
     name: html
     driver: local
     driver_opts:
       type: none
-      device: /home/mmembril/data/html
+      device: ${DATA_DIR:-/home/mmembril/data}/html
       o: bind
 
 networks:

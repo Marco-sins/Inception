@@ -7,7 +7,8 @@ $(error Docker Compose is not installed. Install the Docker Compose plugin or do
 endif
 
 COMPOSE := $(COMPOSE) -f srcs/docker-compose.yml
-DATA_DIR := /home/mmembril/data
+DATA_DIR := $(HOME)/data
+export DATA_DIR
 
 all: prepare
 	@$(COMPOSE) down --remove-orphans >/dev/null 2>&1 || true

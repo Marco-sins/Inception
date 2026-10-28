@@ -35,8 +35,8 @@ The normal workflow is:
 make
 ```
 
-The Makefile creates `/home/mmembril/data/database` and
-`/home/mmembril/data/html`, then lets Docker Compose build and start the
+The Makefile creates `$HOME/data/database` and `$HOME/data/html`, then lets
+Docker Compose build and start the
 services. Compose creates the `inception` bridge network and waits for
 MariaDB's healthcheck before starting WordPress. This does not use `sudo` or
 modify `/etc/hosts`; add the local
@@ -81,8 +81,12 @@ discarded.
 The named volumes are `database` and `html`. Their local
 driver stores data at:
 
-- `/home/mmembril/data/database` for MariaDB.
-- `/home/mmembril/data/html` for WordPress files.
+- `$HOME/data/database` for MariaDB.
+- `$HOME/data/html` for WordPress files.
+
+The bind-mount base directory can be overridden with `DATA_DIR`; direct
+Compose invocations default to `/home/mmembril/data` for compatibility with
+the evaluation environment.
 
 The services communicate through the user-defined `inception` bridge network;
 Compose DNS resolves `mariadb` and `wordpress` to the corresponding

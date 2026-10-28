@@ -46,7 +46,7 @@ SQL
 fi
 
 mariadb-admin \
-    --socket=/run/mysqld/mysqld.sock \ 
+    --socket=/run/mysqld/mysqld.sock \
     -uroot -p"${MYSQL_ROOT_PASSWORD}" \
     shutdown
     
