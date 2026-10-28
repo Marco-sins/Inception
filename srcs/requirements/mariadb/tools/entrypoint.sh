@@ -45,6 +45,10 @@ else
 SQL
 fi
 
-mariadb-admin --socket=/run/mysqld/mysqld.sock -uroot -p"${MYSQL_ROOT_PASSWORD}" shutdown
+mariadb-admin \
+    --socket=/run/mysqld/mysqld.sock \ 
+    -uroot -p"${MYSQL_ROOT_PASSWORD}" \
+    shutdown
+    
 wait "$pid"
 exec mariadbd --user=mysql
