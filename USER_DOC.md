@@ -1,74 +1,68 @@
-# Inception - User documentation
+# Inception - Documentación para usuarios
 
-## Services
+## Servicios
 
-The stack provides a WordPress website over HTTPS:
+La infraestructura proporciona un sitio web de WordPress mediante HTTPS:
 
-- NGINX terminates TLS on port 443 and forwards PHP requests.
-- WordPress runs PHP-FPM and provides the website and `/wp-admin` panel.
-- MariaDB stores WordPress content and settings.
+- NGINX termina la conexión TLS en el puerto 443 y reenvía las solicitudes PHP.
+- WordPress ejecuta PHP-FPM y proporciona el sitio web y el panel `/wp-admin`.
+- MariaDB almacena el contenido y la configuración de WordPress.
 
-## Start and stop
+## Iniciar y detener
 
-Install Docker, Docker Compose, and `make`, then run from the repository root:
+Instala Docker, Docker Compose y `make`. A continuación, ejecuta desde la raíz del repositorio:
 
 ```sh
 make
 ```
 
-To stop containers while keeping data:
+Para detener los contenedores conservando los datos:
 
 ```sh
 make down
 ```
 
-To see container status and logs:
+Para consultar el estado de los contenedores y sus registros:
 
 ```sh
 make ps
 make logs
 ```
 
-`make logs` shows the latest 100 lines without following the stream. This is
-intentional because the legacy `docker-compose` v1 client can raise a
-`KeyError: 'id'` while following Docker Engine events. Use
-`docker compose logs -f` only when the Compose v2 plugin is installed.
+`make logs` muestra las últimas 100 líneas sin seguir el flujo de registros. Esto es intencionado porque el cliente antiguo `docker-compose` v1 puede generar un error `KeyError: 'id'` al seguir los eventos de Docker Engine.
 
-## Website and administration
+Utiliza `docker compose logs -f` únicamente cuando esté instalado el complemento Compose v2.
 
-Find the VM address with:
+## Sitio web y administración
+
+Obtén la dirección IP de la máquina virtual con:
 
 ```sh
 ip -4 addr show
 ```
 
-If the browser runs inside the VM, add `127.0.0.1 mmembril.42.fr` to the VM's
-`/etc/hosts`. If the browser runs on the host computer, add the VM's address
-instead, for example `192.168.56.101 mmembril.42.fr`, to the host computer's
-`/etc/hosts`. The VM network adapter must be reachable from the host
-(bridged networking or a host-only adapter), or port 443 must be forwarded
-from the host to the VM.
+Añade `127.0.0.1 mmembril.42.fr` al archivo `/etc/hosts` de la máquina virtual.
 
-Visit:
+Accede a:
 
-- Website: `https://mmembril.42.fr`
-- Administration: `https://mmembril.42.fr/wp-admin`
+- Sitio web: `https://mmembril.42.fr`
+- Administración: `https://mmembril.42.fr/wp-admin`
 
-The certificate is self-signed, so a browser warning on first access is
-expected.
+El certificado está autofirmado, por lo que es normal que el navegador muestre una advertencia durante el primer acceso.
 
-## Credentials
+## Credenciales
 
-On the first run, `make` copies `srcs/.env.example` to `srcs/.env`. Edit
-`srcs/.env` and replace all placeholder values before starting. This ignored
-file contains the MariaDB root/database credentials and both WordPress user
-credentials. The administrator username is deliberately `mmembril_manager`
-and does not contain `admin`.
+Durante la primera ejecución, `make` copia `srcs/.env.example` a `srcs/.env`.
 
-Never commit `srcs/.env`, share it publicly, or put passwords in a Dockerfile.
-For a production deployment, use Docker secrets or another secret manager.
+Edita `srcs/.env` y sustituye todos los valores de ejemplo antes de iniciar los servicios.
 
-## Troubleshooting
+Este archivo, que está excluido de Git, contiene las credenciales de root y de la base de datos de MariaDB, así como las credenciales de ambos usuarios de WordPress.
+
+Nunca subas `srcs/.env` a Git, lo compartas públicamente ni introduzcas contraseñas en un Dockerfile.
+
+Para un despliegue en producción, utiliza Docker Secrets u otro gestor de secretos.
+
+## Solución de problemas
 
 ```sh
 docker compose -f srcs/docker-compose.yml ps
@@ -77,5 +71,6 @@ docker compose -f srcs/docker-compose.yml logs wordpress
 docker compose -f srcs/docker-compose.yml logs mariadb
 ```
 
-If the site is not ready immediately, wait for MariaDB and WordPress to finish
-their first-time initialization. Persistent data is retained by `make down`.
+Si el sitio web no está disponible inmediatamente, espera a que MariaDB y WordPress terminen su inicialización inicial.
+
+Los datos persistentes se conservan al ejecutar `make down`.

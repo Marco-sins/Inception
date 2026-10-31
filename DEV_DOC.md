@@ -1,10 +1,8 @@
-# Inception - Developer documentation
+# Inception - Documentación para desarrolladores
 
-## Prerequisites and setup
+## Requisitos previos y configuración
 
-Use a Linux virtual machine with Docker Engine, either the Docker Compose
-plugin or the `docker-compose` command, and `make`. The repository is
-structured as follows:
+Utiliza una máquina virtual Linux con Docker Engine, con el comando `docker-compose`, y `make`. El repositorio está estructurado de la siguiente manera:
 
 ```text
 srcs/
@@ -16,46 +14,42 @@ srcs/
     mariadb/
 ```
 
-Create the local configuration and replace every placeholder:
+Crea la configuración local y sustituye todos los valores de ejemplo:
 
 ```sh
 cp srcs/.env.example srcs/.env
-$EDITOR srcs/.env
+nano srcs/.env
 ```
 
-`srcs/.env` is ignored by Git. It is the only local configuration file
-containing passwords. Each service has its own Dockerfile and does not use a
-pre-built WordPress, NGINX, or MariaDB image.
+`srcs/.env` está excluido de Git. Es el único archivo de configuración local que contiene contraseñas. Cada servicio tiene su propio Dockerfile y no utiliza imágenes preconstruidas de WordPress, NGINX o MariaDB.
 
-## Build and launch
+## Construcción y lanzamiento
 
-The normal workflow is:
+El flujo de trabajo habitual es:
 
 ```sh
 make
 ```
 
-The Makefile creates `$HOME/data/database` and `$HOME/data/html`, then lets
-Docker Compose build and start the
-services. Compose creates the `inception` bridge network and waits for
-MariaDB's healthcheck before starting WordPress. This does not use `sudo` or
-modify `/etc/hosts`; add the local
-domain manually when necessary. Before starting, `make` removes old
-containers with `down --remove-orphans`; this keeps named volumes and avoids a
-known Docker Compose v1 recreation error (`KeyError: ContainerConfig`).
-Validate the rendered Compose file without starting containers:
+El Makefile crea los directorios `$HOME/data/database` y `$HOME/data/html` y, a continuación, permite que Docker Compose construya e inicie los servicios. Compose crea la red puente `inception` y espera a que MariaDB supere su comprobación de estado (`healthcheck`) antes de iniciar WordPress.
+
+Esto no utiliza `sudo` ni modifica `/etc/hosts`; añade el dominio local manualmente cuando sea necesario.
+
+Antes de iniciar los servicios, `make` elimina los contenedores antiguos mediante `down --remove-orphans`. Esto conserva los volúmenes con nombre y evita un error conocido de recreación de Docker Compose v1 (`KeyError: ContainerConfig`).
+
+Para validar el archivo Compose generado sin iniciar los contenedores:
 
 ```sh
 docker compose -f srcs/docker-compose.yml config
 ```
 
-When Docker runs inside a virtual machine, port 443 is published by the VM.
-For browser access from the host, use a bridged or host-only VM adapter and
-map the VM address to `mmembril.42.fr` in the host's `/etc/hosts`, or configure
-a NAT port forward from host port 443 to guest port 443. `127.0.0.1` refers to
-the VM itself when used inside the VM and does not refer to the host computer.
+Cuando Docker se ejecuta dentro de una máquina virtual, el puerto 443 se publica desde la propia máquina virtual.
 
-## Container and volume management
+Para acceder desde el navegador del equipo anfitrión, utiliza un adaptador de red en modo puente o solo-anfitrión y asigna la dirección IP de la máquina virtual al dominio `mmembril.42.fr` en el archivo `/etc/hosts` del equipo anfitrión, o configura un reenvío de puertos NAT desde el puerto 443 del anfitrión al puerto 443 de la máquina virtual.
+
+`127.0.0.1` hace referencia a la propia máquina virtual cuando se utiliza dentro de ella, y no al ordenador anfitrión.
+
+## Gestión de contenedores y volúmenes
 
 ```sh
 make ps
@@ -67,37 +61,27 @@ docker compose -f srcs/docker-compose.yml exec wordpress wp user list --allow-ro
 docker volume ls
 ```
 
-The Makefile prints a bounded log snapshot instead of using `logs -f`. This
-avoids the known `KeyError: 'id'` event-stream exception in legacy
-`docker-compose` v1. The application containers are unaffected by that client
-exception.
+El Makefile muestra una captura limitada de los registros en lugar de utilizar `logs -f`. Esto evita la excepción conocida `KeyError: 'id'` del flujo de eventos en la versión antigua de `docker-compose` v1. Los contenedores de la aplicación no se ven afectados por esta excepción del cliente.
 
-`make clean` stops the stack, removes locally built images and volumes, and
-deletes the persistent data directory. Use it only when all site data may be
-discarded.
+`make clean` detiene los servicios, elimina las imágenes construidas localmente y los volúmenes, y borra el directorio de datos persistentes. Utilízalo únicamente cuando se puedan descartar todos los datos del sitio web.
 
-## Persistence and runtime details
+## Persistencia y detalles de ejecución
 
-The named volumes are `database` and `html`. Their local
-driver stores data at:
+Los volúmenes con nombre son `database` y `html`. Su controlador local almacena los datos en:
 
-- `$HOME/data/database` for MariaDB.
-- `$HOME/data/html` for WordPress files.
+- `$HOME/data/database` para MariaDB.
+- `$HOME/data/html` para los archivos de WordPress.
 
-The bind-mount base directory can be overridden with `DATA_DIR`; direct
-Compose invocations default to `/home/mmembril/data` for compatibility with
-the evaluation environment.
+El directorio base de los montajes enlazados (*bind mounts*) puede modificarse mediante `DATA_DIR`. Las ejecuciones directas de Compose utilizan por defecto `/home/mmembril/data` para mantener la compatibilidad con el entorno de evaluación.
 
-The services communicate through the user-defined `inception` bridge network;
-Compose DNS resolves `mariadb` and `wordpress` to the corresponding
-containers. The `mariadb` healthcheck gates WordPress startup. WordPress validates its
-PHP-FPM configuration before running in the foreground. MariaDB initializes its
-database and application user automatically at every container start, including
-when the persistent data directory already exists. Its healthcheck tests the
-application credentials and database, not merely the MariaDB process.
-WordPress copies its source into the volume, creates `wp-config.php`, installs
-the site, and creates the second user on the first run. NGINX generates a
-self-signed certificate and runs in the foreground as PID 1.
+Los servicios se comunican a través de la red puente definida por el usuario `inception`. El DNS de Compose resuelve `mariadb` y `wordpress` hacia sus respectivos contenedores.
 
-Only NGINX publishes port 443. WordPress PHP-FPM listens on the private Docker
-network at port 9000 and MariaDB is not published to the host.
+El `healthcheck` de MariaDB controla el inicio de WordPress. WordPress valida su configuración de PHP-FPM antes de ejecutarse en primer plano.
+
+MariaDB inicializa automáticamente su base de datos y su usuario de aplicación en cada inicio del contenedor, incluso cuando el directorio de datos persistentes ya existe. Su `healthcheck` comprueba las credenciales de la aplicación y la base de datos, no simplemente que el proceso de MariaDB esté en ejecución.
+
+WordPress copia sus archivos de origen al volumen, crea `wp-config.php`, instala el sitio y crea el segundo usuario durante la primera ejecución.
+
+NGINX genera un certificado autofirmado y se ejecuta en primer plano como PID 1.
+
+Únicamente NGINX publica el puerto 443. WordPress PHP-FPM escucha en el puerto 9000 dentro de la red privada de Docker y MariaDB no publica ningún puerto al equipo anfitrión.
